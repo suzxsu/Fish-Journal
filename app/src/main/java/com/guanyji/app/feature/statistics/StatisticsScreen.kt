@@ -33,7 +33,7 @@ import java.util.Locale
 import kotlin.math.abs
 
 @Composable
-fun StatisticsScreen(onBack: () -> Unit, onAddRecord: (String, String?) -> Unit, vm: StatisticsViewModel = viewModel(factory = StatisticsViewModel.factory(LocalContext.current.applicationContext as Application))) {
+fun LegacyStatisticsScreen(onBack: () -> Unit, onAddRecord: (String, String?) -> Unit, vm: StatisticsViewModel = viewModel(factory = StatisticsViewModel.factory(LocalContext.current.applicationContext as Application))) {
     val profile: ProfileViewModel = viewModel(factory = ProfileViewModel.factory(LocalContext.current.applicationContext as Application))
     val preferences by profile.preferences.collectAsStateWithLifecycle()
     val tanks by vm.tanks.collectAsStateWithLifecycle()

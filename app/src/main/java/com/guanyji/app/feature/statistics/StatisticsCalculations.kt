@@ -20,6 +20,7 @@ data class StatisticsInput(
 data class TrendPoint(val at: Long, val value: Double, val unit: String, val label: String)
 data class StatisticsSummary(
     val activeFish: Int,
+    val waterTestEvents: Int,
     val feedingEvents: Int,
     val feedingsPerWeek: Double,
     val waterChangeEvents: Int,
@@ -52,6 +53,7 @@ fun calculateStatistics(
     val fishAtEnd = fishAtEndRows.size
     val inRangeFeedings = input.feedings.filter { row -> row.event.fedAt in start until end && (tankId == null || row.event.tankId == tankId) }
     val changes = input.waterChanges.filter { it.completedAt in start until end && (tankId == null || it.tankId == tankId) }
+    val testsInRange = input.waterTests.filter { it.test.measuredAt in start until end && (tankId == null || it.test.tankId == tankId) }
     val normalizedChanges = changes.mapNotNull { change ->
         val pair = change.volumeValue?.let { value -> change.volumeUnit?.let { normalizeVolume(value, it) } }
         pair
@@ -93,6 +95,7 @@ fun calculateStatistics(
         .mapValues { (_, points) -> points.sortedBy { it.at } }
     return StatisticsSummary(
         activeFish = fishAtEnd,
+        waterTestEvents = testsInRange.size,
         feedingEvents = inRangeFeedings.size,
         feedingsPerWeek = inRangeFeedings.size / weeks,
         waterChangeEvents = changes.size,

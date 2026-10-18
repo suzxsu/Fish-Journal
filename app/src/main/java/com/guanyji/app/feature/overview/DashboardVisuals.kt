@@ -220,6 +220,24 @@ internal object FishIcons {
         }.build()
     }
 
+    /** 详情页「照片」快捷动作使用的相机图标。 */
+    val Camera: ImageVector by lazy {
+        ImageVector.Builder(key("camera"), 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(3.6f, 8.2f); horizontalLineTo(6.7f)
+                lineTo(8.2f, 6f); horizontalLineTo(15.8f)
+                lineTo(17.3f, 8.2f); horizontalLineTo(20.4f)
+                verticalLineTo(18.6f); horizontalLineTo(3.6f); close()
+                moveTo(12f, 10.1f)
+                curveTo(14.3f, 10.1f, 16.1f, 11.9f, 16.1f, 14.2f)
+                curveTo(16.1f, 16.5f, 14.3f, 18.3f, 12f, 18.3f)
+                curveTo(9.7f, 18.3f, 7.9f, 16.5f, 7.9f, 14.2f)
+                curveTo(7.9f, 11.9f, 9.7f, 10.1f, 12f, 10.1f)
+                close()
+            }
+        }.build()
+    }
+
     val WaterLevel: ImageVector by lazy {
         ImageVector.Builder(key("waterLevel"), 24.dp, 24.dp, 24f, 24f).apply {
             path(stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
