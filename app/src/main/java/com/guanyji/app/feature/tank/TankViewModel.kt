@@ -125,6 +125,8 @@ class TankViewModel(application: Application) : AndroidViewModel(application) {
         data class Failed(val message: String) : SummaryState
     }
 
+    suspend fun tankOnce(id: String): Tank? = repository.tankOnce(id)
+
     fun summary(id: String?): kotlinx.coroutines.flow.StateFlow<SummaryState> =
         (id?.takeIf(String::isNotBlank)?.let(repository::tankSummary) ?: flowOf(null))
             .map<TankSummary?, SummaryState> { it?.let(SummaryState::Found) ?: SummaryState.Missing }
@@ -145,6 +147,8 @@ class TankViewModel(application: Application) : AndroidViewModel(application) {
     fun fish(id: String) = repository.fishInTank(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun tests(id: String) = repository.waterTestsForTank(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun changes(id: String) = repository.waterChangesForTank(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    fun feedings(id: String) = repository.feedingsForTank(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    fun growth(id: String) = repository.growthForTank(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun tanks() = repository.allTanks().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun tasks() = repository.careTasks().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun tasks(tankId: String) = repository.careTasksForTank(tankId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -156,6 +160,21 @@ class TankViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addWaterTest(test: WaterTest, values: List<WaterTestValue>, onSaved: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
         try { repository.saveWaterTest(test, values); onSaved() } catch (error: CancellationException) { throw error } catch (error: Exception) { onError(error.message ?: "保存失败") }
+    }
+
+    /** 详情页一键喂食：默认当前时间、全缸、上一次饲料；返回事件 id 供撤销。 */
+    fun recordQuickFeeding(tankId: String, foodType: String?, onSaved: (String) -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
+        try {
+            onSaved(repository.recordQuickFeeding(tankId, null, foodType))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            onError(error.message ?: "喂食记录保存失败")
+        }
+    }
+
+    fun undoFeeding(id: String, onDone: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
+        try { repository.deleteFeeding(id); onDone() } catch (error: CancellationException) { throw error } catch (error: Exception) { onError(error.message ?: "撤销失败") }
     }
 
     fun addWaterChange(value: WaterChange, onSaved: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {

@@ -23,8 +23,10 @@ class LocalRepository(
     fun tanks(): Flow<List<TankSummary>> = database.tanks().observeAll()
     fun photo(id: String): Flow<Photo?> = database.photos().observe(id)
     fun tankSummary(id: String): Flow<TankSummary?> = database.tanks().observeSummary(id)
+    suspend fun tankOnce(id: String): Tank? = withContext(ioDispatcher) { database.tanks().get(id) }
     fun fishInTank(tankId: String): Flow<List<Fish>> = database.fish().observeForTank(tankId)
     fun growthForFish(fishId: String): Flow<List<GrowthRecord>> = database.growthRecords().observeForFish(fishId)
+    fun growthForTank(tankId: String): Flow<List<GrowthRecord>> = database.growthRecords().observeForTank(tankId)
     fun feedingsForTank(tankId: String): Flow<List<FeedingEventWithTargets>> = database.feeding().observeForTank(tankId)
     fun feedingCountsByTank(dayStart: Long, dayEnd: Long): Flow<List<TankFeedingCount>> = database.feeding().observeFeedingCountsByTank(dayStart, dayEnd)
     fun commonFoods(): Flow<List<CommonFood>> = database.commonFoods().observeAll()
@@ -191,6 +193,40 @@ class LocalRepository(
             foodName?.trim()?.takeIf { it.isNotBlank() }?.let { name ->
                 database.commonFoods().insert(CommonFood(name = name, createdAt = System.currentTimeMillis()))
             }
+        }
+    }
+
+    /**
+     * 一键喂食：只写一条真实喂食事件与一个关联对象，时间取当前时间。
+     * 与完整表单共用 [saveFeeding] 的全部校验，不做任何统计上的“补默认值”。
+     * 返回事件 id，供界面做 3 秒撤销。
+     */
+    suspend fun recordQuickFeeding(tankId: String, fishId: String?, foodType: String?): String {
+        val now = System.currentTimeMillis()
+        val cleanFood = foodType?.trim()?.takeIf { it.isNotBlank() }
+        val event = FeedingEvent(
+            tankId = tankId,
+            fedAt = now,
+            foodType = cleanFood,
+            amountValue = null,
+            amountUnit = null,
+            result = null,
+            notes = null,
+        )
+        val target = if (fishId == null) {
+            FeedingTarget(feedingEventId = event.id, targetType = FeedingTargetType.tank, tankId = tankId, fishId = null, result = null)
+        } else {
+            FeedingTarget(feedingEventId = event.id, targetType = FeedingTargetType.fish, tankId = null, fishId = fishId, result = null)
+        }
+        saveFeeding(event, listOf(target), foodName = cleanFood)
+        return event.id
+    }
+
+    /** 撤销一次误触的一键喂食；只删除这一条事件及其关联对象，不动其它记录。 */
+    suspend fun deleteFeeding(id: String) = withContext(ioDispatcher) {
+        database.withTransaction {
+            database.feeding().deleteTargets(id)
+            check(database.feeding().deleteEvent(id) == 1) { "Feeding record no longer exists" }
         }
     }
 

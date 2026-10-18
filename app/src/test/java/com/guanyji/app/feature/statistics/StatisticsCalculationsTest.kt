@@ -54,6 +54,7 @@ class StatisticsCalculationsTest {
         val row = WaterTestWithValues(test, listOf(recorded, recorded.copy(id = "unknown", parameterCode = "pH", value = null)))
         val input = emptyInput().copy(tanks = listOf(tank), waterTests = listOf(row))
         val first = calculateStatistics(input, tank.id, from, to, zone)
+        assertEquals(1, first.waterTestEvents)
         assertEquals(listOf(25.0), first.waterParameters.getValue("temperature").map { it.value })
         val edited = row.copy(values = listOf(recorded.copy(value = 27.5)))
         val updated = calculateStatistics(input.copy(waterTests = listOf(edited)), tank.id, from, to, zone)

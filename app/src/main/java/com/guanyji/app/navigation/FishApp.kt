@@ -1,5 +1,8 @@
 package com.guanyji.app.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -23,9 +26,12 @@ import com.guanyji.app.feature.tank.TankDetailScreen
 import com.guanyji.app.feature.tank.TankFormScreen
 import com.guanyji.app.feature.tank.TankListScreen
 import com.guanyji.app.feature.tank.TankQuickFormScreen
+import com.guanyji.app.feature.tank.TankRecordsPage
+import com.guanyji.app.feature.tank.TankRecordsScreen
 import com.guanyji.app.feature.fish.FishListScreen
 import com.guanyji.app.feature.fish.FishFormScreen
 import com.guanyji.app.feature.fish.FishDetailScreen
+import com.guanyji.app.feature.fish.FishRecordsPage
 import com.guanyji.app.feature.fish.FishRecordsScreen
 import com.guanyji.app.feature.feeding.FeedingScreen
 import com.guanyji.app.feature.care.CareScreen
@@ -97,7 +103,7 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             val active = topLevelOwner(currentRoute.orEmpty())
-            if (active != null) DashboardBottomNavigation(current = active) { destination ->
+            if (active != null && showsBottomBar(currentRoute, backStackEntry?.arguments?.getString("action"))) DashboardBottomNavigation(current = active) { destination ->
                 if (!isAtTopLevelRoot(currentRoute, backStackEntry?.arguments, destination)) {
                     navigateToTopLevelRoot(navController, destination)
                 }
@@ -108,6 +114,10 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
             navController = navController,
             startDestination = AppDestination.Overview.route,
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
+            enterTransition = { fadeIn(tween(180)) },
+            exitTransition = { fadeOut(tween(140)) },
+            popEnterTransition = { fadeIn(tween(180)) },
+            popExitTransition = { fadeOut(tween(140)) },
         ) {
             AppDestination.entries.filter { it != AppDestination.Care }.forEach { destination ->
                 composable(destination.route) {
@@ -170,13 +180,20 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
             }
             composable("fish/detail/{fishId}") { entry ->
                 val fishId = entry.arguments?.getString("fishId") ?: return@composable
-                FishDetailScreen(fishId, onBack = { navController.navigateBackTo(AppDestination.Fish) }, onEdit = { navController.navigate("fish/edit/$fishId") }, onOpenRecords = { section -> navController.navigate(fishRecordsRoute(fishId, section)) }, onQuickFeeding = { navController.navigate(feedingRoute(fishId = fishId)) }, onOpenTank = { tankId -> navController.navigate("tank/detail/$tankId") })
+                FishDetailScreen(
+                    fishId = fishId,
+                    onBack = { navController.navigateBackTo(AppDestination.Fish) },
+                    onEdit = { navController.navigate("fish/edit/$fishId") },
+                    onOpenRecords = { section -> navController.navigate(fishRecordsRoute(fishId, section)) },
+                    onOpenTank = { tankId -> navController.navigate("tank/detail/$tankId") },
+                    onRecordWater = { tankId -> navController.navigate("tank/action/$tankId/water") },
+                )
             }
             composable("fish/records/{fishId}/{section}") { entry ->
                 val fishId = entry.arguments?.getString("fishId") ?: return@composable
                 val section = entry.arguments?.getString("section") ?: return@composable
                 if (section !in setOf("growth", "feeding", "timeline")) InvalidDestinationScreen("未知的鱼只记录类型", onBack = { navController.popBackStack() })
-                else FishRecordsScreen(fishId, section, onBack = { navController.popBackStack() })
+                else FishRecordsPage(fishId, section, onBack = { navController.popBackStack() })
             }
             composable("tank/edit/{tankId}") { entry ->
                 val tankId = entry.arguments?.getString("tankId") ?: return@composable
@@ -189,12 +206,42 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
                     onBack = { navController.navigateBackTo(AppDestination.Tanks) },
                     onEdit = { navController.navigate("tank/edit/$tankId") },
                     onOpenFish = { fishId -> navController.navigate("fish/detail/$fishId") },
+                    onOpenRecords = { section -> navController.navigate("tank/records/$tankId/$section") },
                     onQuickAction = { action, id ->
                         if (action == "fish") navController.navigate(fishCreateRoute(id))
                         else if (action.startsWith("change/")) navController.navigate("tank/action/$id/change/${action.substringAfter('/')}")
                         else navController.navigate("tank/action/$id/$action")
                     },
                 )
+            }
+            composable("tank/records/{tankId}/{section}") { entry ->
+                val tankId = entry.arguments?.getString("tankId") ?: return@composable
+                val section = entry.arguments?.getString("section") ?: return@composable
+                if (section !in setOf("summary", "water", "fish", "care", "activity")) {
+                    InvalidDestinationScreen("未知的鱼缸记录类型", onBack = { navController.popBackStack() })
+                } else {
+                    val initialWaterTab = navController.previousBackStackEntry?.savedStateHandle?.get<String>("waterInitialTab")
+                    if (initialWaterTab != null) navController.previousBackStackEntry?.savedStateHandle?.remove<String>("waterInitialTab")
+                    TankRecordsPage(
+                        tankId = tankId,
+                        section = section,
+                        onBack = { navController.popBackStack() },
+                        onEdit = { navController.navigate("tank/edit/$tankId") },
+                        onOpenFish = { fishId -> navController.navigate("fish/detail/$fishId") },
+                        onEditFish = { fishId -> navController.navigate("fish/edit/$fishId") },
+                        onRecordWaterTemplate = { testId ->
+                            navController.currentBackStackEntry?.savedStateHandle?.set("waterTemplateId", testId)
+                            navController.navigate("tank/action/$tankId/water")
+                        },
+                        onEditWaterChange = { changeId -> navController.navigate("tank/action/$tankId/change/$changeId") },
+                        initialWaterTab = initialWaterTab,
+                        onQuickAction = { action, id ->
+                            if (action == "fish") navController.navigate(fishCreateRoute(id))
+                            else if (action.startsWith("change/")) navController.navigate("tank/action/$id/change/${action.substringAfter('/')}")
+                            else navController.navigate("tank/action/$id/$action")
+                        },
+                    )
+                }
             }
             composable("tank/action/{tankId}/change/{changeId}") { entry ->
                 val tankId = entry.arguments?.getString("tankId").orEmpty()
@@ -204,9 +251,13 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
             composable("tank/action/{tankId}/{action}") { entry ->
                 val tankId = entry.arguments?.getString("tankId").orEmpty()
                 val action = entry.arguments?.getString("action").orEmpty()
-                if (action !in setOf("feeding", "water", "task", "fish")) {
+                if (action !in setOf("feeding", "water", "task", "fish", "change")) {
                     InvalidDestinationScreen("未知的鱼缸操作", onBack = { navController.popBackStack() })
-                } else if (action == "feeding") FeedingScreen(tankId, null, onBack = { navController.popBackStack() }) else TankQuickFormScreen(tankId, action, onBack = { navController.popBackStack() })
+                } else if (action == "feeding") FeedingScreen(tankId, null, onBack = { navController.popBackStack() }) else {
+                        val templateId = navController.previousBackStackEntry?.savedStateHandle?.get<String>("waterTemplateId")
+                        if (templateId != null) navController.previousBackStackEntry?.savedStateHandle?.remove<String>("waterTemplateId")
+                        TankQuickFormScreen(tankId, action, onBack = { navController.popBackStack() }, onOpenHistory = { navController.navigate("tank/records/$tankId/water") }, templateTestId = templateId)
+                    }
             }
             composable("feeding?tankId={tankId}&fishId={fishId}", arguments = listOf(
                 navArgument("tankId") { type = NavType.StringType; nullable = true; defaultValue = null },
@@ -217,12 +268,23 @@ internal fun FishAppContent(navController: NavHostController, openCareTaskId: St
                 FeedingScreen(selectedTank, selectedFish, onBack = { navController.popBackStack() })
             }
             composable("statistics") {
-                StatisticsScreen(onBack = { navController.popBackStack() }, onAddRecord = { action, tankId ->
-                    if (action == "growth") navController.navigate(AppDestination.Fish.route)
-                    else if (tankId == null) navController.navigate(AppDestination.Tanks.route)
-                    else if (action == "feeding") navController.navigate("tank/action/$tankId/feeding")
-                    else navController.navigate("tank/action/$tankId/$action")
-                })
+                StatisticsScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddRecord = { action, tankId ->
+                        if (action == "growth") navController.navigate(AppDestination.Fish.route)
+                        else if (tankId == null) navController.navigate(AppDestination.Tanks.route)
+                        else if (action == "feeding") navController.navigate("tank/action/$tankId/feeding")
+                        else navController.navigate("tank/action/$tankId/$action")
+                    },
+                    onOpenRecords = { kind, tankId ->
+                        if (tankId == null) navController.navigate(AppDestination.Tanks.route)
+                        else if (kind == "feeding") navController.navigate("tank/records/$tankId/activity")
+                        else {
+                            if (kind == "change") navController.currentBackStackEntry?.savedStateHandle?.set("waterInitialTab", "Change")
+                            navController.navigate("tank/records/$tankId/water")
+                        }
+                    },
+                )
             }
             composable("settings?section={section}", arguments = listOf(navArgument("section") { type = NavType.StringType; nullable = true; defaultValue = null })) { entry ->
                 SettingsScreen(onBack = { navController.popBackStack() }, onAbout = { navController.navigate("about/help") }, initialSection = entry.arguments?.getString("section"))

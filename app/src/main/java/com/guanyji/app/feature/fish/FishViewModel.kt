@@ -141,6 +141,21 @@ class FishViewModel(application: Application) : AndroidViewModel(application) {
     fun latestWeight(id: String) = repository.latestWeight(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     fun saveGrowth(value: GrowthRecord, onSaved: () -> Unit, onError: (String) -> Unit) = run(onSaved, onError) { repository.saveGrowthRecord(value) }
     fun deleteGrowth(id: String, onSaved: () -> Unit, onError: (String) -> Unit) = run(onSaved, onError) { repository.deleteGrowthRecord(id) }
+
+    /** 详情页一键喂食：默认当前时间、当前鱼、上一次饲料；返回事件 id 供撤销。 */
+    fun recordQuickFeeding(fish: Fish, foodType: String?, onSaved: (String) -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
+        try {
+            onSaved(repository.recordQuickFeeding(fish.tankId, fish.id, foodType))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            onError(error.message ?: "喂食记录保存失败")
+        }
+    }
+
+    fun undoFeeding(id: String, onDone: () -> Unit, onError: (String) -> Unit) = run(onDone, onError) {
+        repository.deleteFeeding(id)
+    }
     fun feedings(id: String, tankId: String) = repository.feedingsForFish(id, tankId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun waterTests(tankId: String) = repository.waterTestsForTank(tankId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun photo(id: String?) = (id?.let(repository::photo) ?: flowOf(null)).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

@@ -96,6 +96,7 @@ data class PhotoReferenceCounts(val tankCovers: Int, val fishCovers: Int, val gr
 interface GrowthRecordDao {
     @Query("SELECT * FROM growth_records ORDER BY measuredAt") fun observeAll(): Flow<List<GrowthRecord>>
     @Query("SELECT * FROM growth_records WHERE fishId = :fishId ORDER BY measuredAt DESC") fun observeForFish(fishId: String): Flow<List<GrowthRecord>>
+    @Query("SELECT growth_records.* FROM growth_records JOIN fish ON fish.id = growth_records.fishId WHERE fish.tankId = :tankId ORDER BY growth_records.measuredAt DESC") fun observeForTank(tankId: String): Flow<List<GrowthRecord>>
     @Query("SELECT * FROM growth_records WHERE id = :id") suspend fun get(id: String): GrowthRecord?
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insert(value: GrowthRecord)
     @androidx.room.Update suspend fun update(value: GrowthRecord)
@@ -128,6 +129,7 @@ interface FeedingDao {
     @androidx.room.Update suspend fun updateEvent(event: FeedingEvent)
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertTargets(targets: List<FeedingTarget>)
     @Query("DELETE FROM feeding_targets WHERE feedingEventId = :eventId") suspend fun deleteTargets(eventId: String)
+    @Query("DELETE FROM feeding_events WHERE id = :id") suspend fun deleteEvent(id: String): Int
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertTarget(target: FeedingTarget)
     @Query("SELECT * FROM feeding_events WHERE id = :id") suspend fun getEvent(id: String): FeedingEvent?
     @Query("SELECT * FROM feeding_targets WHERE feedingEventId = :eventId") suspend fun getTargets(eventId: String): List<FeedingTarget>

@@ -17,4 +17,10 @@ class TankCalculationsTest {
         assertNull(calculateWaterChangeRatioPercent(10.0, "L", null, null))
         assertNull(calculateWaterChangeRatioPercent(101.0, "L", 100.0, "L"))
     }
+
+    @Test fun waterChangeRatioDisplayRoundsToOneDecimalAndDropsZeroFraction() {
+        assertEquals("4", formatWaterChangeRatio(4.0))
+        assertEquals("13.9", formatWaterChangeRatio(13.888888))
+        assertEquals("15", formatWaterChangeRatio(15.04))
+    }
 }

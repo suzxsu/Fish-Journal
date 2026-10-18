@@ -38,6 +38,7 @@ internal val registeredAppRoutes = listOf(
     "fish/records/{fishId}/{section}",
     "tank/edit/{tankId}",
     "tank/detail/{tankId}",
+    "tank/records/{tankId}/{section}",
     "tank/action/{tankId}/{action}",
     "tank/action/{tankId}/change/{changeId}",
     "feeding?tankId={tankId}&fishId={fishId}",
@@ -51,12 +52,29 @@ internal val registeredAppRoutes = listOf(
 internal fun topLevelOwner(routePattern: String): AppDestination? = when (routePattern) {
     "overview" -> AppDestination.Overview
     "fish", "fish/create?tankId={tankId}", "fish/edit/{fishId}", "fish/detail/{fishId}", "fish/records/{fishId}/{section}" -> AppDestination.Fish
-    "tanks", "tank/create", "tank/edit/{tankId}", "tank/detail/{tankId}", "tank/action/{tankId}/{action}", "tank/action/{tankId}/change/{changeId}" -> AppDestination.Tanks
+    "tanks", "tank/create", "tank/edit/{tankId}", "tank/detail/{tankId}", "tank/records/{tankId}/{section}", "tank/action/{tankId}/{action}", "tank/action/{tankId}/change/{changeId}" -> AppDestination.Tanks
     "care", "care?view={view}", "care?view=" -> AppDestination.Care
     "profile", "statistics", "settings?section={section}", "about", "about/{section}" -> AppDestination.Profile
     "feeding?tankId={tankId}&fishId={fishId}", "navigation/unknown" -> null
     else -> null
 }
+
+/**
+ * 沉浸式页面：隐藏 App 底部导航，由页面自己的头图返回键和记录坞承担导航与动作。
+ * 覆盖详情页、二级记录页、统计页，以及水质/换水录入页；返回依靠页内返回键与系统返回。
+ */
+internal val immersiveDetailRoutes = setOf(
+    "fish/detail/{fishId}",
+    "fish/records/{fishId}/{section}",
+    "tank/detail/{tankId}",
+    "tank/records/{tankId}/{section}",
+    "tank/action/{tankId}/change/{changeId}",
+    "statistics",
+)
+
+internal fun showsBottomBar(routePattern: String?, action: String? = null): Boolean =
+    routePattern != null && topLevelOwner(routePattern) != null && routePattern !in immersiveDetailRoutes &&
+        !(routePattern == "tank/action/{tankId}/{action}" && action in setOf("water", "change"))
 
 internal fun isKnownRoute(routePattern: String): Boolean = routePattern in registeredAppRoutes
 

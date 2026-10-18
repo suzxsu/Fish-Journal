@@ -33,8 +33,8 @@ fun normalizeGrowthUnit(value: Double, unit: String, length: Boolean): Pair<Doub
 }
 
 fun growthMeasurementSummary(record: GrowthRecord): String = listOfNotNull(
-    record.lengthValue?.let { "體長 ${it.prettyGrowth()} ${record.lengthUnit.orEmpty()}" },
-    record.weightValue?.let { "體重 ${it.prettyGrowth()} ${record.weightUnit.orEmpty()}" },
+    record.lengthValue?.let { "体长 ${it.prettyGrowth()} ${record.lengthUnit.orEmpty()}" },
+    record.weightValue?.let { "体重 ${it.prettyGrowth()} ${record.weightUnit.orEmpty()}" },
 ).joinToString(" · ")
 
 private fun Double.prettyGrowth() = if (this % 1.0 == 0.0) toLong().toString() else "%.2f".format(java.util.Locale.getDefault(), this).trimEnd('0').trimEnd('.')

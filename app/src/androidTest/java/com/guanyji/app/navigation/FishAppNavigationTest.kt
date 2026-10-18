@@ -132,22 +132,31 @@ class FishAppNavigationTest {
     fun invalidFishAndTankIdsShowRecoverableNotFoundContent() {
         launchAt("fish/detail/missing-navigation-test-id")
         composeRule.onNodeWithTag("fish-not-found").assertExists()
-        composeRule.onNodeWithTag("destination-fish").assertIsSelected()
+        composeRule.onNodeWithTag("destination-fish").assertDoesNotExist()
+        composeRule.onNodeWithText("返回").performClick()
+        composeRule.onNodeWithTag("destination-overview").assertIsSelected()
         composeRule.onNodeWithTag("destination-fish").performClick()
         composeRule.onNodeWithTag("fish-list-screen").assertExists()
-        composeRule.onNodeWithTag("destination-tanks").performClick()
-        composeRule.onNodeWithTag("tank-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-fish").assertIsSelected()
+
         composeRule.runOnIdle { navController.navigate("tank/detail/missing-navigation-test-id") }
         composeRule.onNodeWithTag("tank-not-found").assertExists()
+        composeRule.onNodeWithTag("destination-tanks").assertDoesNotExist()
+        composeRule.onNodeWithText("返回").performClick()
+        composeRule.onNodeWithTag("destination-overview").assertIsSelected()
+        composeRule.onNodeWithTag("destination-tanks").performClick()
+        composeRule.onNodeWithTag("tank-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-tanks").assertIsSelected()
     }
 
     @Test
-    fun invalidTankIdShowsRecoverableNotFoundContent() {
+    fun invalidTankIdHidesBottomBarAndReturnsToTankList() {
         launchAt("tank/detail/missing-navigation-test-id")
         composeRule.onNodeWithTag("tank-not-found").assertExists()
-        composeRule.onNodeWithTag("destination-tanks").assertIsSelected()
-        composeRule.onNodeWithTag("destination-tanks").performClick()
+        composeRule.onNodeWithTag("destination-tanks").assertDoesNotExist()
+        composeRule.onNodeWithText("返回").performClick()
         composeRule.onNodeWithTag("tank-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-tanks").assertIsSelected()
     }
 
     @Test
@@ -173,23 +182,28 @@ class FishAppNavigationTest {
     }
 
     @Test
-    fun selectingCurrentTabFromFishAndTankDetailsReturnsToTheirRoots() {
+    fun detailPagesHideBottomBarAndTheirOwnBackButtonReturnsToRoot() {
         launchAt("fish/detail/not-found-for-test")
+        composeRule.onNodeWithTag("destination-fish").assertDoesNotExist()
+        composeRule.onNodeWithText("返回").performClick()
+        composeRule.onNodeWithTag("destination-overview").assertIsSelected()
         composeRule.onNodeWithTag("destination-fish").performClick()
         composeRule.onNodeWithTag("fish-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-fish").assertIsSelected()
 
         composeRule.runOnIdle { navController.navigate("tank/detail/not-found-for-test") }
-        composeRule.onNodeWithTag("tank-not-found").assertExists()
+        composeRule.onNodeWithTag("destination-tanks").assertDoesNotExist()
+        composeRule.onNodeWithText("返回").performClick()
+        composeRule.onNodeWithTag("destination-overview").assertIsSelected()
         composeRule.onNodeWithTag("destination-tanks").performClick()
         composeRule.onNodeWithTag("tank-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-tanks").assertIsSelected()
     }
 
     @Test
-    fun switchingTabsFromDetailShowsTheSelectedRootAndSystemBackReturnsToPreviousTab() {
+    fun systemBackFromDetailReturnsToPreviousTopLevelAndRestoresBottomBar() {
         launchAt("fish/detail/not-found-for-test")
-        composeRule.onNodeWithTag("destination-tanks").performClick()
-        composeRule.onNodeWithTag("destination-tanks").assertIsSelected()
-        composeRule.onNodeWithTag("tank-list-screen").assertExists()
+        composeRule.onNodeWithTag("destination-overview").assertDoesNotExist()
         Espresso.pressBack()
         composeRule.onNodeWithTag("destination-overview").assertIsSelected()
         composeRule.onNodeWithTag("dashboard-title").assertExists()

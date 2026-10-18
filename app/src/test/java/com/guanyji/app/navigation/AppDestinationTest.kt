@@ -1,6 +1,7 @@
 package com.guanyji.app.navigation
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -39,6 +40,23 @@ class AppDestinationTest {
         assertEquals(AppDestination.Care, topLevelOwner("care"))
         assertEquals(null, topLevelOwner("feeding?tankId={tankId}&fishId={fishId}"))
         assertEquals(null, topLevelOwner("future/unregistered"))
+    }
+
+    @Test
+    fun `bottom bar hides only on immersive detail pages`() {
+        assertFalse(showsBottomBar("fish/detail/{fishId}"))
+        assertFalse(showsBottomBar("tank/detail/{tankId}"))
+        assertTrue(showsBottomBar("fish"))
+        assertTrue(showsBottomBar("tanks"))
+        assertFalse(showsBottomBar("fish/records/{fishId}/{section}"))
+        assertFalse(showsBottomBar("tank/records/{tankId}/{section}"))
+        assertFalse(showsBottomBar("feeding?tankId={tankId}&fishId={fishId}"))
+        assertFalse(showsBottomBar("tank/action/{tankId}/{action}", "water"))
+        assertFalse(showsBottomBar("tank/action/{tankId}/{action}", "change"))
+        assertFalse(showsBottomBar("tank/action/{tankId}/change/{changeId}"))
+        assertFalse(showsBottomBar("statistics"))
+        assertTrue(showsBottomBar("tank/action/{tankId}/{action}", "task"))
+        assertFalse(showsBottomBar(null))
     }
 
     @Test
