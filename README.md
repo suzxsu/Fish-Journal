@@ -1,181 +1,226 @@
 # 观鱼记
 
-观鱼记是一款面向观赏鱼爱好者的 Android 本地记录应用。它用于管理鱼缸与鱼只档案，并把成长、喂食、水质、换水和养护任务记录在设备本地，方便查看日常安排与历史统计。
+观鱼记是一款面向观赏鱼爱好者的 Android 本地记录应用。它用于管理鱼缸与鱼只档案，并把成长、喂食、水质、换水、养护任务和统计汇总保存在设备本地，不依赖后端、云数据库或账号登录。
 
-项目当前以单一 Android 应用模块交付，采用 Kotlin、Jetpack Compose 与 Room。仓库未配置业务后端或账号登录流程；主要记录由本地数据库保存，照片复制到应用管理的本地文件中。当前实现及其验收限制见下文。
+当前项目以单一 Android 应用模块交付，技术栈为 Kotlin + Jetpack Compose + MVVM + Room。鱼缸、鱼只、各类记录、任务与设置持久化在本地 SQLite，照片复制到应用私有目录，并可通过应用内备份导出或恢复。
 
-## 功能状态
+## 实机截图
 
-### 已实现
+真机运行的界面效果图（总览、我的鱼、鱼只/鱼缸详情、成长档案、水质趋势、统计报表、鱼只时间线，共 9 张）已整理到 [实机截图文档](docs/实机截图.md)。
 
-- **总览**：展示本地鱼缸、鱼只及养护信息，并提供快速喂食和相关记录入口；空数据提示以实际记录为准。
-- **鱼只档案**：创建、编辑和查看鱼只，关联鱼缸、状态、照片及备注；支持成长、喂食和时间线记录入口。
-- **鱼缸管理**：管理淡水缸或海水缸、容量与设备等信息，查看鱼缸详情，并记录水质和换水信息。
-- **成长记录**：记录体长、体重、时间、照片和备注；缺失测量值保持为空，不以 0 代替。
-- **喂食记录**：快速或完整记录喂食，可按全缸或指定多条鱼关联对象，并查看和编辑历史。
-- **水质与换水**：保存鱼缸水质参数及其单位和测量信息；记录换水量、可计算的比例及下一次计划。
-- **养护计划**：建立一次性或重复任务，支持任务状态管理；可启用本地通知提醒。
-- **统计**：按鱼缸和日期范围汇总已有成长、喂食、水质、换水及养护数据。
-- **设置与备份**：提供单位/主题/通知等设置，以及本地数据备份的检查、导出和恢复流程。
-- **照片管理**：通过系统照片选择器或拍摄流程导入照片，并在应用管理的本地存储中管理照片和缩略图。
+截图来自 Xiaomi M2011K2C（Android 14，1080 × 2400）运行的 Debug 构建，展示设备上真实存在的本地记录。本 README 不直接展示图片，请通过上方链接查看。
 
-### 部分实现或仍有限制
+## 功能
 
-- 自动化测试已覆盖多项业务计算、Room 仓储、迁移、照片和备份逻辑；专项验收报告记录的最新完整设备 runner 为 38 项通过、1 项失败、2 项未执行。失败与 Compose 导航 UI 测试在特定设备上挂起/崩溃有关，因此不能视为整套设备测试通过。
-- 计划任务和通知调度代码已实现，应用也注册了开机、时区、系统时间和应用更新后的重新调度接收器。提醒在强停、设备重启、厂商省电策略等真实场景中的端到端投递仍待设备验收。
-- 专项报告指出，鱼只/鱼缸页面 CRUD、筛选、表单返回保护、不同屏幕和系统字号等仍有手工验收项；水质表单的淡水/海水交互也需要设备复核。
-- 专项报告还记录了一次默认包 instrumentation 清理导致正式应用被卸载的风险。APK 后续已重新安装，但报告无法确认卸载前的应用私有数据是否保留。该报告不是对当前使用者设备数据状态的判断。
+### 总览
 
-### 设计文档中的范围，尚不能全部视为已交付
+- 问候语、当日鱼缸/鱼只/喂食摘要，以及「今天要做的」养护任务。
+- 快速入口：记录喂食、记录水质。
+- 鱼缸卡片展示最近实测水质（水温、盐度、比重、pH 等）与今日喂食次数，未记录的值显示为空而不是 0。
+- 「最近动态」汇总喂食、水质、成长等事件，可跳转全部记录。
 
-产品设计文档还描述了诸如提醒中心、日历视图、详细鱼只筛选排序、完整转缸历史交互等目标。虽然部分数据结构或相关代码已存在，README 不将设计文档中的需求自动认定为完整可用功能。请以当前界面实现和后续验收结果为准。项目没有可据以承诺发布日期的公开路线图。
+### 鱼只
 
-## 截图
+- 创建、编辑、查看鱼只，关联鱼缸、状态（在养 / 隔离 / 已转出 / 已故 / 已归档）、照片、鱼种、性别、来源与备注。
+- 列表支持按名称/鱼种搜索、按鱼缸与状态筛选、按最近添加/入缸日期/最近测量排序，以及拖拽自定义顺序。
+- 鱼只详情为单页主线：头图 → 今日喂食卡 → 鱼缸/水况卡 → 记录坞；一键喂食可撤销。
+- 成长档案：体长/体重切换、30/90/全部范围，展示测量次数、首次与变化值，仅使用真实测量点。
+- 鱼只时间线：按月分组，可筛选全部/成长/喂食/状态事件。
 
-仓库中目前没有确认属于实际运行应用的截图。`docs/产品设计/UI设计总览图.png` 和其他产品设计图片是设计参考图，不代表当前应用实机界面，因此这里不将其作为应用截图展示。
+### 鱼缸
+
+- 支持淡水缸与海水缸、容量/尺寸/启用日期/设备/备注，海水缸可启用盐度管理。
+- 鱼缸列表展示缸体卡片、最近水质与「检测/换水」日期，支持搜索与类型筛选。
+- 鱼缸详情为单页主线：头图 → 水况卡（最近实测值 + 趋势入口）→ 缸内鱼群 → 养护卡（今日喂食/上次换水/下次任务）→ 缸内动态 → 鱼缸档案；底部固定记录坞提供记录水质、喂食、换水。
+- 二级页：缸内鱼群（搜索/筛选/双列卡）、养护日程（周历/完成/延期）、缸内动态（含鱼只成长事件/日期分组）。
+
+### 记录
+
+- **喂食**：快速或完整记录，可按全缸或指定多条鱼关联；多条鱼记录仍只计为一次鱼缸事件；支持历史查看与编辑。
+- **水质**：默认带入上次参数与数值，支持模板复用、7/30/90/全部趋势、按参数查看、只读检测详情；高级字段收进底部面板；1.025 这类数值会提示「像比重」并允许改记盐度。
+- **换水**：记录换水量与单位、实时换水比例、时间、前后水温/盐度、耗材与备注、下次计划；无容量时不生成比例。
+- **成长**：记录体长、体重、时间、照片与备注；未知测量值保持为空，不以 0 代替。
+- 表单处理加载、保存中、成功、失败、重复点击与未保存返回确认。
+
+### 养护
+
+- 今日计划、日历、未来计划、历史记录四个视图。
+- 一次性或重复任务（喂食、换水、水质检测、盐度检测、设备维护、自定义），支持完成、延期、跳过、取消。
+- 基于 AlarmManager + 本地通知的提醒；系统通知权限关闭时，任务仍保留在养护列表中。
+
+### 统计报表
+
+- 入口：我的 → 统计报表。
+- 报表期：7 天 / 30 天 / 90 天 / 自定义，可按单个鱼缸筛选。
+- 深色「本期概览」展示喂食、换水、水质、任务次数及说明文案。
+- 趋势页签：喂食、换水、水质、成长；换水支持次数/水量切换，成长支持鱼只与体长/体重切换。
+- 精度按参数区分（如盐度 3 位小数）；本期记录可跳转到对应记录或换水列表。
+
+### 设置、备份与照片
+
+- 展示单位、日期格式、主题（跟随系统/浅色/深色）、本地通知开关。
+- 本地备份：导出 zip、校验备份、恢复前创建当前数据安全副本，恢复会替换鱼缸、鱼只、记录、任务、设置与照片。
+- 照片通过系统照片选择器或拍摄导入，复制到应用私有目录，数据库保存引用；列表与详情使用缩略图。
 
 ## 技术栈
 
 | 领域 | 当前配置 | 用途 |
 | --- | --- | --- |
-| 语言 | Kotlin 2.2.20 | Android 应用与测试代码 |
+| 语言 | Kotlin 2.2.20、JDK 17 | 应用与测试代码 |
 | UI | Jetpack Compose、Material 3、Compose BOM 2025.06.01 | 声明式界面与主题组件 |
-| 架构组件 | AndroidX Lifecycle ViewModel、Lifecycle Compose | 页面状态与生命周期感知的状态收集 |
-| 导航 | Navigation Compose 2.9.1 | 页面与底部主导航 |
-| 本地数据库 | Room 2.7.2、SQLite、KSP | 实体、数据访问、事务和数据库迁移 |
-| 异步处理 | Kotlin Coroutines、Flow（Room KTX） | 异步数据操作与持续数据流 |
-| 图片 | Coil Compose 2.7.0、AndroidX ExifInterface 1.4.1 | 图片加载与图像方向处理 |
-| 构建 | Android Gradle Plugin 8.13.2、Gradle Wrapper 8.14.4 | Android 构建与依赖配置 |
-| 测试 | JUnit 4、AndroidX Test、Room Testing、Compose UI Test、Espresso | 单元、仪器、数据库和界面测试 |
+| 架构 | MVVM、ViewModel + StateFlow、Repository | 页面状态、业务逻辑与数据访问 |
+| 导航 | Navigation Compose 2.9.1 | 页面、二级页与底部主导航 |
+| 本地数据库 | Room 2.7.2、SQLite、KSP 2.2.20-2.0.4 | 实体、DAO、事务与 v1→v8 显式迁移 |
+| 异步 | Kotlin Coroutines、Flow（Room KTX） | 异步读写与持续数据流 |
+| 图片 | Coil Compose 2.7.0、AndroidX ExifInterface 1.4.1 | 图片加载与方向处理 |
+| 列表排序 | reorderable 3.1.0 | 网格长按拖拽排序 |
+| 构建 | AGP 8.13.2、Gradle Wrapper 8.14.4、compileSdk/targetSdk 35、minSdk 26 | Android 构建 |
+| 测试 | JUnit 4、AndroidX Test、Room Testing、Compose UI Test、Espresso | 单元、数据库、仪器与界面测试 |
 
-版本信息来自根目录 `build.gradle.kts`、`app/build.gradle.kts` 与 `gradle/wrapper/gradle-wrapper.properties`。项目当前未使用 `gradle/libs.versions.toml`。
+版本信息以根目录 `build.gradle.kts`、`app/build.gradle.kts` 与 `gradle/wrapper/gradle-wrapper.properties` 为准；项目未使用 `gradle/libs.versions.toml`。
 
-## 架构与目录
-
-项目只有一个 Gradle 子模块 `:app`。应用代码按导航、功能、数据和共享 UI 组件组织，页面通过 ViewModel 与 Repository 访问本地数据。
+## 项目结构
 
 ```text
 .
 ├── app/
 │   ├── build.gradle.kts
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── AndroidManifest.xml
-│   │   │   ├── java/com/guanyji/app/
-│   │   │   │   ├── core/designsystem/     # 通用 Compose 组件与未保存更改处理
-│   │   │   │   ├── data/                  # Room、本地 Repository、照片和备份
-│   │   │   │   ├── feature/               # 总览、鱼只、鱼缸、喂食、养护、统计、个人中心
-│   │   │   │   ├── navigation/            # 主导航与页面路由
-│   │   │   │   └── ui/theme/              # Compose 主题和颜色
-│   │   │   └── res/                       # 应用图标、照片路径及界面图片资源
-│   │   ├── test/                          # 本地 JVM 单元测试
-│   │   └── androidTest/                   # Android 仪器测试
-│   └── schemas/                           # Room schema（如项目中生成）
+│   ├── schemas/                            # Room schema 导出
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── java/com/guanyji/app/
+│       │   │   ├── MainActivity.kt         # 入口、主题偏好与提醒同步
+│       │   │   ├── core/
+│       │   │   │   ├── designsystem/       # 卡片外壳、深度装饰、详情组件、离开确认
+│       │   │   │   └── time/               # 设备日界与日期范围
+│       │   │   ├── data/
+│       │   │   │   ├── local/              # Room 实体、DAO、迁移、通知调度
+│       │   │   │   ├── repository/         # 本地数据访问、排序与测量偏好
+│       │   │   │   ├── photo/              # 照片复制、缩略图与引用
+│       │   │   │   └── backup/             # 备份导出、校验与恢复
+│       │   │   ├── feature/
+│       │   │   │   ├── overview/           # 总览
+│       │   │   │   ├── fish/               # 鱼只列表、详情、成长档案、时间线
+│       │   │   │   ├── tank/               # 鱼缸列表、详情、水质趋势、换水/水质记录
+│       │   │   │   ├── feeding/            # 喂食记录与计算
+│       │   │   │   ├── care/               # 养护计划与记录
+│       │   │   │   ├── statistics/         # 统计报表与计算
+│       │   │   │   ├── profile/            # 我的、设置与备份
+│       │   │   │   ├── photo/              # 照片选择与加载
+│       │   │   │   └── shell/              # 页面外壳
+│       │   │   ├── navigation/             # AppDestination、路由与主导航
+│       │   │   └── ui/theme/               # 主题、颜色与卡片 token
+│       │   └── res/                        # 图标、图片与路径资源
+│       ├── test/                           # 本地 JVM 单元测试
+│       └── androidTest/                    # 仪器测试（数据库、Repository、备份、导航）
 ├── docs/
-│   ├── 产品设计/                           # 产品设计与专项回归报告
-│   └── 验收/                               # 验收矩阵
-├── gradle/wrapper/                        # Gradle Wrapper 配置
+│   ├── 产品设计/                           # 产品设计文档、设计总览图与卡片规范
+│   ├── screenshots/                        # 实机截图原图
+│   └── 实机截图.md                          # 真机界面截图汇总与说明
+├── gradle/wrapper/
 ├── build.gradle.kts
 └── settings.gradle.kts
 ```
 
-关键入口：
+关键入口文件：
 
-- `app/src/main/java/com/guanyji/app/MainActivity.kt`：应用 Activity、主题偏好和提醒同步入口。
-- `app/src/main/java/com/guanyji/app/navigation/FishApp.kt`：Compose 导航图和页面路由。
-- `app/src/main/java/com/guanyji/app/data/local/Entities.kt`：Room 数据实体。
+- `app/src/main/java/com/guanyji/app/MainActivity.kt`：Activity、主题偏好、通知权限与提醒同步。
+- `app/src/main/java/com/guanyji/app/navigation/FishApp.kt`：导航图、底部栏显隐与二级页路由。
+- `app/src/main/java/com/guanyji/app/data/local/Entities.kt`：Room 实体与业务枚举。
 - `app/src/main/java/com/guanyji/app/data/local/FishDatabase.kt`：DAO、数据库定义与显式迁移。
-- `app/src/main/java/com/guanyji/app/data/repository/LocalRepository.kt`：本地数据访问和业务校验。
-- `app/src/main/java/com/guanyji/app/data/backup/LocalBackupManager.kt`：本地备份导入导出。
-- `app/src/main/java/com/guanyji/app/feature/`：各业务页面、ViewModel 和计算逻辑。
+- `app/src/main/java/com/guanyji/app/data/repository/LocalRepository.kt`：本地数据访问与业务校验。
+- `app/src/main/java/com/guanyji/app/data/backup/LocalBackupManager.kt`：备份导出、校验与恢复。
 
 ## 数据存储与隐私
 
-鱼缸、鱼只、成长、喂食、水质、换水、养护任务、养护记录和设置通过 Room/SQLite 保存在设备本地。照片由应用复制并保存到本地应用管理的文件区域，数据库保存照片引用。项目配置中未发现业务后端或账号登录依赖；Android Manifest 未声明 `INTERNET` 权限。备份功能由用户通过应用流程导出或恢复本地备份文件。
-
-这些说明仅描述当前仓库配置和代码，不构成“绝对安全”或适用于所有系统备份行为的隐私保证。卸载应用、设备故障或用户恢复操作可能影响本地数据；重要记录应使用应用内备份并自行妥善保存导出的文件。
+- 全部业务数据保存在应用私有的 Room/SQLite 数据库中（当前 schema 版本 8），照片位于应用私有文件目录，数据库只保存路径引用。
+- 项目未配置业务后端或账号体系，Manifest 未声明 `INTERNET` 权限，运行时只申请通知权限与开机重排提醒权限。
+- 数据库升级使用显式 Migration（v1→v8），未启用 destructive migration，升级不会清空用户记录。
+- 卸载应用、清除数据或设备故障会移除本地记录，重要数据应通过「我的 → 数据与偏好 → 存储与备份」导出并自行保存。
+- 恢复备份会替换当前鱼缸、鱼只、记录、任务、设置和照片；应用在恢复前会创建当前数据的安全副本。
 
 ## 环境要求
 
-根据当前配置确认：
+- JDK 17。
+- Android SDK Platform 35，`minSdk = 26`（Android 8.0）。
+- Gradle Wrapper 8.14.4（首次使用需能获取对应发行包）。
+- 运行仪器测试需要模拟器或设备；在带真实数据的真机上运行前请先阅读下方「测试与验证」。
 
-- JDK 17（Java/Kotlin 编译目标为 17）。
-- Gradle Wrapper 8.14.4；首次使用时 Wrapper 需要能取得对应 Gradle 发行包。
-- Android Gradle Plugin 8.13.2、Kotlin 2.2.20。
-- Android SDK Platform 35（`compileSdk` 和 `targetSdk` 均为 35）。
-- Android 8.0 / API 26 或更高版本（`minSdk = 26`）。
-- 运行仪器测试还需要已启动且可访问的 Android 模拟器或连接设备。
+## 构建与安装
 
-项目没有提供 `local.properties`。请在本机 Android Studio SDK Manager 安装 Android SDK Platform 35，并由 Android Studio 配置本机 SDK 路径。
-
-## 安装与运行
-
-1. 使用 Android Studio 打开仓库根目录 `FishApp`。
-2. 安装并选择 JDK 17，等待 Gradle Sync 完成；确保 SDK Platform 35 已安装。
-3. 连接 API 26 或更高版本的设备，或启动相应模拟器。
-4. 在 Android Studio 运行 `app` 配置，或在 Windows PowerShell 中执行：
+使用 Android Studio 打开仓库根目录，选择 JDK 17 并等待 Gradle Sync 完成；或在 PowerShell 中执行：
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-构建成功后，Debug APK 通常位于 `app\build\outputs\apk\debug\app-debug.apk`。可通过 Android Studio 的 Run/安装功能安装，也可在已连接设备并启用 ADB 的情况下执行：
+Debug APK 输出到 `app\build\outputs\apk\debug\app-debug.apk`。已连接设备并启用 ADB 时，覆盖安装不会清除数据：
 
 ```powershell
 & "$env:ANDROID_SDK_ROOT\platform-tools\adb.exe" install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-本仓库没有提供正式发布版本或 APK 下载地址。仓库中出现的 `app/build/outputs` 文件是本地构建产物，不等同于项目发布。
+仓库中没有正式发布版本，也没有 APK 下载地址；`app/build/outputs` 下的文件是本地构建产物。
 
-## 开发与测试
-
-在 Windows PowerShell 的仓库根目录运行：
+## 测试与验证
 
 ```powershell
 # 编译 Debug APK
 .\gradlew.bat assembleDebug
 
-# 运行本地 JVM 单元测试
+# 本地 JVM 单元测试
 .\gradlew.bat testDebugUnitTest
 
-# 执行 Android Lint
+# Android Lint
 .\gradlew.bat lintDebug
 
-# 编译 Android 仪器测试代码
+# 编译仪器测试代码
 .\gradlew.bat compileDebugAndroidTestKotlin
 
-# 在已连接的模拟器或设备运行仪器测试
-.\gradlew.bat connectedDebugAndroidTest
-```
-
-`testDebugUnitTest` 运行 `app/src/test/` 中不依赖设备的测试；`connectedDebugAndroidTest` 运行 `app/src/androidTest/` 中需要 Android 环境的数据库、Repository 和界面测试。设备测试可能受设备、Android Test Orchestrator/UTP 清理行为和 Compose UI 自动化环境影响。专项回归报告为避免测试清理正式包，使用了隔离 applicationId：
-
-```powershell
+# 在模拟器或隔离 QA 包运行仪器测试
 .\gradlew.bat connectedDebugAndroidTest "-PacceptanceApplicationId=com.guanyji.app.qa"
 ```
 
-该属性在 `app/build.gradle.kts` 中定义，用于隔离验收测试包。若在带有真实用户数据的设备上做仪器测试，应先阅读专项验收报告中的数据隔离风险并使用隔离包名。
+### 最近一次实际执行结果（2026-10-18，Windows / JDK 17）
 
-### 已有验证记录
+| 命令 | 结果 |
+| --- | --- |
+| `.\gradlew.bat assembleDebug` | 通过（BUILD SUCCESSFUL，输出 debug APK） |
+| `.\gradlew.bat :app:testDebugUnitTest` | 通过：21 个测试类 / 86 个用例，0 失败、0 错误、0 跳过 |
+| `.\gradlew.bat :app:lintDebug` | 通过：0 error、26 warning、3 hint |
+| `adb install -r app-debug.apk` | 通过，覆盖升级后既有本地记录保留 |
 
-`docs/产品设计/第一阶段专项回归验收报告.md` 记录了一次 2026-10-15 的验证：`testDebugUnitTest` 的 27 项通过，`lintDebug` 与 `assembleDebug` 成功；完整设备 runner 声明 41 项，最终 38 项通过、1 项失败、2 项未执行。因此设备自动化整体状态为部分通过，而不是全部通过。以上是仓库已有报告中的结果，不代表本次 README 修改后重新运行的结果。详细设备、数据风险和未完成手工验收项请阅读该报告。
+单元测试覆盖业务计算（喂食、成长、水质、换水比例、统计、日期范围）、卡片视觉 token 与对比度、备份校验、排序与测量偏好、导航路由等。
+
+### 仪器测试限制
+
+`app/src/androidTest` 包含 9 个测试类（Repository、DAO、备份、照片与导航）。本仓库不在装有真实数据的真机上运行 `connectedDebugAndroidTest`：AGP 在任务结束后会卸载应用包，连带删除应用私有数据库与照片。仪器测试应在模拟器上执行，或使用 `-PacceptanceApplicationId=com.guanyji.app.qa` 隔离包名，并先导出应用内备份。本次 README 更新没有运行仪器测试。
+
+### 其他未完成验收
+
+- 通知在强停、重启、厂商省电策略下的端到端投递，仍需要在目标设备上做专项验收。
+- 尚未配置 CI；上述结果来自本地开发机执行，不代表其他环境的构建或测试结论。
 
 ## 项目文档
 
-- [第一阶段本地版 App 设计文档](docs/产品设计/第一阶段本地版App设计文档.md)：产品范围、页面交互、数据模型及验收要求。
-- [UI 设计总览图](docs/产品设计/UI设计总览图.png)：设计方向参考图，不是当前应用截图。
-- [第一阶段专项回归验收报告](docs/产品设计/第一阶段专项回归验收报告.md)：已执行的构建、测试、缺陷回归及剩余风险。
-- [全项目实现度审计与下一阶段计划](docs/验收/全项目实现度审计与下一阶段计划.md)：当前实现度、已知风险与后续计划。
-- [未提交改动代码审计报告](docs/验收/未提交改动代码审计报告.md)：卡片视觉改动的审计发现与修复记录。
+- [实机截图文档](docs/实机截图.md)：真机运行的界面效果图与页面说明。
+- [第一阶段本地版 App 设计文档](docs/产品设计/第一阶段本地版App设计文档.md)：产品范围、页面结构、交互逻辑、数据模型与验收标准。
+- [UI 设计总览图](docs/产品设计/UI设计总览图.png)：整体视觉方向参考图。
+- [鱼缸卡片设计规范展示板](docs/产品设计/鱼缸卡片设计规范展示板.png)：鱼缸/鱼只卡片立体效果与配色依据。
 
-## 路线图
+早期验收报告、审计报告、设计稿与逐页改版 mockup 已从仓库移除，其内容不再反映当前实现。
 
-仓库包含第一阶段设计文档和验收报告，但没有独立、可靠的后续版本路线图。设计文档中尚未完全验收的需求不能据此视为承诺的开发计划；后续优先级与交付时间尚未指定。
+## 已知限制
+
+- 统计、趋势和成长图只使用真实记录，数据不足时显示提示而不是补造数据点。
+- 归档的鱼只/鱼缸仍可查看历史记录，但界面不提供一键恢复为在养状态的入口。
+- 设计文档中仍有部分目标功能（如提醒中心、日历视图的更多筛选维度）未完全交付，README 不将其视为现有功能。
 
 ## 贡献
 
-目前仓库未发现独立贡献指南或已配置的贡献自动化流程。提交问题或建议时，请提供清晰的复现步骤、设备/API 版本和预期结果；代码修改建议可通过项目托管平台的 Issue 或 Pull Request 提交（仓库未在当前配置中声明托管地址）。提交前建议运行与改动相关的单元测试、Lint；涉及数据库时应补充迁移与数据保留测试，并遵守现有非破坏性迁移约束。
+提交问题时请提供复现步骤、设备型号、Android 版本与构建版本；代码改动建议附带对应单元测试。涉及数据库结构时需提供可测试的非破坏性 Migration，并避免在真实数据设备上运行会卸载应用的仪器测试。提交前建议执行 `testDebugUnitTest` 与 `lintDebug`。
 
 ## 许可证
 
-仓库根目录当前没有 `LICENSE` 文件，项目许可证尚未指定。使用、分发或贡献代码前，请向项目维护者确认适用条款。
+仓库当前没有 `LICENSE` 文件，许可证尚未指定；使用、分发或贡献代码前请与维护者确认。
